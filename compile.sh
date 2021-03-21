@@ -7,5 +7,5 @@ for file in *.out; do
 	fi
 done
 
-gfortran main.f90 tred2.f90 tqli.f90 pqrsint.f90 -o main.out
+gfortran main.f90 tred2.f90 tqli.f90 pqrsint.f90 frobenius.f90 -o main.out
 

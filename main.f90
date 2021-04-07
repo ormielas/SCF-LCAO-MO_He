@@ -12,35 +12,57 @@ program helium
         logical :: condition = .true., equal
         character :: slater
 
+        !#### OPERATOR'S CHOICE OF THE SIZE LIMIT OF THE BASIS SET ####
+        write(*,*) ''
+        write(*,*) 'Chose the basis set dimension M :'
+        write(*,*) 'Note that for M > 2, Slater coefficients are built recursively'
+        !following : alpha(n+1) = 1.2 * alpha(n), alpha(1)
+        ! = 1.d0'
+        write(*,*) ''
+        read(*,*) M
+        write(*,*) ''
 
-        !#### OPERATOR'S CHOICE OF SLATER COEFFS ####
-        write(*,*) ''
-        write(*,*) 'Chose the set of Slater coefficients for the following SCF calulation :'
-        write(*,*) '(S)tandard Slater coefficients, (O)ptimized Slater coeffients, (R)ecursive Slater coefficients'
-        write(*,*) ''
-        read(*,*) slater
-        write(*,*) ''
+        if (M .eq. 2) then
+                !#### OPERATOR'S CHOICE OF SLATER COEFFS ####
+                write(*,*) ''
+                write(*,*) 'Chose the set of Slater coefficients for the following SCF calulation :'
+                write(*,*) '(S)tandard Slater coefficients, (O)ptimized Slater coeffients, (R)ecursive Slater coefficients'
+                write(*,*) ''
+                read(*,*) slater
+                write(*,*) ''
         
-        !#### READING INPUT PARAMS ####
-        if ((slater .eq. 'S') .or. (slater .eq. 's')) then        
-                open(unit=1, file="input_standard.txt", status="old")
-                read(1,*) M
+                !#### READING INPUT PARAMS ####
+                if ((slater .eq. 'S') .or. (slater .eq. 's')) then        
+                        open(unit=1, file="input_standard.txt", status="old")
+                        read(1,*) M
+                        allocate(alpha(M))
+                        read(1,*) alpha
+                        close(1)
+                else if ((slater .eq. 'O') .or. (slater .eq. 'o')) then
+                        open(unit=2, file="input_optimized.txt", status="old")
+                        read(2,*) M
+                        allocate(alpha(M))
+                        read(2,*) alpha
+                        close(2)
+                else if ((slater .eq. 'R') .or. (slater .eq. 'r')) then
+                        open(unit=3, file="input_recursive.txt", status="old")
+                        read(3,*) M
+                        allocate(alpha(M))
+                        read(3,*) alpha
+                        close(3)
+                end if  
+        else
+                !#### INITIALIZATION OF THE SLATER COEFFS ####
                 allocate(alpha(M))
-                read(1,*) alpha
-                close(1)
-        else if ((slater .eq. 'O') .or. (slater .eq. 'o')) then
-                open(unit=2, file="input_optimized.txt", status="old")
-                read(2,*) M
-                allocate(alpha(M))
-                read(2,*) alpha
-                close(2)
-        else if ((slater .eq. 'R') .or. (slater .eq. 'r')) then
-                open(unit=3, file="input_recursive.txt", status="old")
-                read(3,*) M
-                allocate(alpha(M))
-                read(3,*) alpha
-                close(3)
-        end if  
+                do i = 1, M
+                        if (i .eq. 1) then
+                                alpha(i) = 1.d0
+                        else 
+                                alpha(i) = 1.2d0 * alpha(i-1)
+                        end if
+                end do  
+
+        end if
 
         !#### ALLOCATING MATRICES ####
         allocate(S(M,M), T(M,M), Sbar(M,M), Sm12(M,M), H(M,M), F(M,M), C(M,M), &
@@ -95,9 +117,11 @@ program helium
         write(*,'(A)') 'Iterative SCF process :'
         write(*,'(A)') '***********************'
         write(*,*) ''
-        write(*,'(8A10)') 'Iteration', 'c1', 'c2', 'F11', 'F12', 'F22', 'e', 'E'
+        write(*,'(9A10)') 'Basis size', 'Iteration', 'c1', 'c2', 'F11', 'F12', 'F22', 'e', 'E'
 
         !#### ITERATING SCF PROCESS ####
+        open(unit=4, file="output.txt", status="new")    
+        write(4,'(9A10)') 'Basis size', 'Iteration', 'c1', 'c2', 'F11', 'F12', 'F22', 'e', 'E'
         do while (condition .eqv. .true.)
                 !#### COMPUTATION OF THE FOCK MATRIX F ####
                 G = 0.d0
@@ -153,12 +177,14 @@ program helium
 
 
 
-                write(*,'(I11.1,7F10.6)') it, LCAO(1), LCAO(2), F(1,1), F(1,2), F(2,2), e1, Et(2)
+                write(*,'(2I11.1,7F10.6)') M, it, LCAO(1), LCAO(2), F(1,1), F(1,2), F(2,2), e1, Et(2)
+                write(4,'(2I11.1,7F10.6)') M, it, LCAO(1), LCAO(2), F(1,1), F(1,2), F(2,2), e1, Et(2)
                 condition = (abs(Et(1) - Et(2)) .gt. eps) .and. (nint(tmp) .eq. Z)
                 Et(1) = Et(2)
                 LCAO = LCAOnew
                 it = it + 1
         end do
+        close(4)
         
         !#### COMPUTING TOTAL ENERGY WITH EQ. (10) ####
         Et(2) = 2 * e1 - dot_product(matmul(LCAO,G),LCAO)

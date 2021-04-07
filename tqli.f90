@@ -22,7 +22,7 @@ SUBROUTINE TQLI(D,E,N,NP,Z)
 12      END DO
         M=N
 2       IF ( M .NE. L) THEN
-           IF ( ITER .EQ. 30 ) EXIT
+           IF ( ITER .EQ. 100 ) EXIT
            !IF(ITER.EQ.30) EXIT 'too many iterations'
            ITER = ITER + 1
            G = (D(L+1)-D(L))/(2.0D0*E(L))
